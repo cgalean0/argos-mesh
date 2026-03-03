@@ -1,0 +1,16 @@
+INSERT INTO products (product_name, product_price, product_stock) VALUES
+('Remera Oversize Black', 15900.00, 100),
+('Jean Slim Fit Blue', 35000.50, 20),
+('Hoodie Vintage Grey', 28000.00, 15),
+('Tote Bag Eco', 5200.00, 100),
+('Campera de Cuero Pro', 85000.00, 1),
+('Gorra Snapback Urban', 9500.00, 30),
+('Pantalón Cargo Olive', 32000.00, 12),
+('Remera Basic White', 12000.00, 200),
+('Short Deportivo Dry', 18500.00, 45),
+('Zapatillas Street v1', 55000.00, 8),
+('Medias Pack x3', 4500.00, 150),
+('Bermuda Chino Beige', 22000.00, 25),
+('Camisa Formal Slim', 29500.00, 18),
+('Cinturón Cuero Marrón', 8900.00, 40),
+('Mochila Tech 20L', 42000.00, 10);
