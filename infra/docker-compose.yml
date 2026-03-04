@@ -1,0 +1,63 @@
+services:
+  db: ## Database configuration
+    image: postgres:15-alpine
+    container_name: shop_db
+    restart: always
+    environment:
+      - POSTGRES_USER=user_shop
+      - POSTGRES_PASSWORD=secretPassword #Only for environments of test
+      - POSTGRES_DB=shop_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck: # This help to confirm that the database is running
+      test: ["CMD-SHELL", "pg_isready -U user_shop -d shop_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - argos-network
+
+  app:
+    build:
+      context: ../orders
+      dockerfile: Dockerfile
+    container_name: shop_app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/shop_db
+      SPRING_DATASOURCE_USERNAME: user_shop
+      SPRING_DATASOURCE_PASSWORD: secretPassword
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      # Configuration of RabbitMQ for the dashboard UI
+      SPRING_RABBITMQ_HOST: message_broker
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+    restart: on-failure
+    networks:
+      - argos-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: message_broker
+    ports:
+      - "5672:5672" #AMQP para Spring
+      - "15672:15672" # Port for the web app
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+    networks:
+      - argos-network
+
+networks:
+  argos-network:
+    driver: bridge
+volumes:
+  postgres_data:
