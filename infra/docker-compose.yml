@@ -11,7 +11,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    healthcheck: # This help to confirm that the database is running
+    healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_shop -d shop_db"]
       interval: 10s
       timeout: 5s
@@ -33,19 +33,42 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/shop_db
       SPRING_DATASOURCE_USERNAME: user_shop
       SPRING_DATASOURCE_PASSWORD: secretPassword
-      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       # Configuration of RabbitMQ for the dashboard UI
       SPRING_RABBITMQ_HOST: message_broker
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: admin123
+      # Configuration of Redis
+      SPRING_DATA_REDIS_HOST: redis_db
+      SPRING_DATA_REDIS_PORT: 6379
     restart: on-failure
     networks:
       - argos-network
 
+  sentinel:
+    build:
+      context: ../sentinel
+      dockerfile: Dockerfile
+    container_name: sentinel_app
+    depends_on:
+      redis_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    environment:
+      - SPRING_RABBITMQ_HOST=message_broker
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+      - SPRING_DATA_REDIS_HOST=redis_db
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_THREADS_VIRTUAL_ENABLED=true
+    restart: on-failure
+    networks:
+        - argos-network
+
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3-management
     container_name: message_broker
     ports:
       - "5672:5672" #AMQP para Spring
@@ -56,8 +79,26 @@ services:
     networks:
       - argos-network
 
+  redis_db:
+    image: redis:7.2-alpine
+    container_name: black_list
+    restart: always
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+        - argos-network
+
 networks:
   argos-network:
     driver: bridge
 volumes:
   postgres_data:
+  redis_data:
