@@ -1,6 +1,5 @@
 package com.argos.orders.service;
 
-import com.argos.orders.dto.BuyRequest;
 import com.argos.orders.dto.ProductRequest;
 import com.argos.orders.dto.ProductResponse;
 
@@ -10,5 +9,5 @@ public interface IProductService {
     void deleteProduct(Long id);
     ProductResponse updateProduct(Long id, ProductRequest prod);
     ProductResponse createProduct(ProductRequest prod);
-    Boolean sellProduct(BuyRequest req);
+    void sellProduct(Long id, String ipAddress, Integer quantity);
 }

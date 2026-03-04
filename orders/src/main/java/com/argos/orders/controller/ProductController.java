@@ -10,15 +10,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.argos.orders.dto.BuyRequest;
 import com.argos.orders.dto.ProductRequest;
 import com.argos.orders.dto.ProductResponse;
 import com.argos.orders.service.IProductService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/orders/products")
 public class ProductController {
     private final IProductService productService;
-    
+
     public ProductController(IProductService productService) {
         this.productService = productService;
     }
@@ -29,7 +32,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProductById(@PathVariable Long id){
+    public ResponseEntity<Void> deleteProductById(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
     }
@@ -42,5 +45,16 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(@RequestBody ProductRequest req) {
         return ResponseEntity.ok(productService.createProduct(req));
+    }
+
+    @PostMapping("/{id}/sell")
+    public ResponseEntity<Void> sellProduct(
+            @PathVariable Long id,
+            @RequestBody BuyRequest buyRequest,
+            HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr(); // Extract the client IP.
+        productService.sellProduct(id, clientIp, buyRequest.quantity());
+
+        return ResponseEntity.accepted().build();
     }
 }

@@ -1,11 +1,15 @@
 package com.argos.orders.service.impl;
 
+import java.time.LocalDateTime;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.argos.orders.dto.BuyRequest;
 import com.argos.orders.dto.ProductRequest;
 import com.argos.orders.dto.ProductResponse;
+import com.argos.orders.dto.event.ProductCreatedInternalEvent;
+import com.argos.orders.dto.event.ProductSoldInternalEvent;
+import com.argos.orders.exceptions.NotSuficientStockException;
 import com.argos.orders.exceptions.ProductNotFoundException;
 import com.argos.orders.mappers.ProductMapper;
 import com.argos.orders.model.Product;
@@ -13,17 +17,23 @@ import com.argos.orders.repository.ProductRepository;
 import com.argos.orders.service.IProductService;
 
 @Service
-public class ProductServiceImpl implements IProductService{
+public class ProductServiceImpl implements IProductService {
 
     private final ProductRepository productRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final ProductMapper productMapper;
-    public ProductServiceImpl(ProductRepository productRepository, ProductMapper productMapper) {this.productRepository = productRepository; this.productMapper = productMapper;}
+
+    public ProductServiceImpl(ProductRepository productRepository, ProductMapper productMapper,ApplicationEventPublisher eventPublisher) {
+        this.productRepository = productRepository;
+        this.productMapper = productMapper;
+        this.eventPublisher = eventPublisher;
+    }
 
     @Override
     @Transactional(readOnly = true)
     public ProductResponse getProductById(Long id) {
         Product prod = productRepository.findById(id)
-            .orElseThrow(() -> new ProductNotFoundException("ProductNotFound"));
+                .orElseThrow(() -> new ProductNotFoundException("ProductNotFound"));
         return productMapper.toDTO(prod);
     }
 
@@ -39,7 +49,7 @@ public class ProductServiceImpl implements IProductService{
     @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest prod) {
         Product product = productRepository.findById(id)
-            .orElseThrow(() -> new ProductNotFoundException("ProductNotFound"));
+                .orElseThrow(() -> new ProductNotFoundException("ProductNotFound"));
 
         productMapper.updateEntityFromDto(prod, product);
         productRepository.save(product);
@@ -47,17 +57,26 @@ public class ProductServiceImpl implements IProductService{
     }
 
     @Override
+    @Transactional
     public ProductResponse createProduct(ProductRequest prod) {
         Product createdProduct = new Product();
         productMapper.updateEntityFromDto(prod, createdProduct);
         Product savedProduct = productRepository.save(createdProduct);
-        return productMapper.toDTO(savedProduct);
+        ProductResponse event = productMapper.toDTO(savedProduct);
+        // We made sure that the message only send to Rabbit if the transaction correctly.
+        eventPublisher.publishEvent(new ProductCreatedInternalEvent(event));
+        return event;
     }
 
     @Override
-    public Boolean sellProduct(BuyRequest req) {
-        int sellingProducts = productRepository.decrementStock(req.productId(), req.quantity());
-        return sellingProducts > 0;
+    @Transactional
+    public void sellProduct(Long id, String ipAddress, Integer quantity) {
+        Product product = productRepository.findByIdForUpdate(id)
+            .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        if (product.getProductStock() < quantity) 
+            throw new NotSuficientStockException("The stock is not sufficient");
+        product.setProductStock(product.getProductStock() - quantity);
+        eventPublisher.publishEvent(new ProductSoldInternalEvent(id, quantity, ipAddress, LocalDateTime.now()));
     }
-    
+
 }
