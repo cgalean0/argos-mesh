@@ -56,4 +56,10 @@ public class GlobalExceptionHandler {
             HttpStatus.NOT_FOUND.value(), request.getDescription(false));
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     } 
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ErrorResponse> handleSecurity(Exception ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse("Security Exception" + ex.getMessage() , HttpStatus.FORBIDDEN.value(), request.getDescription(false));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
 }

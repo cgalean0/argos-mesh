@@ -3,6 +3,7 @@ package com.argos.orders.service.impl;
 import java.time.LocalDateTime;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.argos.orders.dto.ProductRequest;
@@ -22,12 +23,17 @@ public class ProductServiceImpl implements IProductService {
     private final ProductRepository productRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ProductMapper productMapper;
+    private final StringRedisTemplate redisTemplate;
+    private static final String BLACKLIST_PREFIX = "blacklist:ip:";
 
-    public ProductServiceImpl(ProductRepository productRepository, ProductMapper productMapper,ApplicationEventPublisher eventPublisher) {
+    public ProductServiceImpl(ProductRepository productRepository, ApplicationEventPublisher eventPublisher,
+            ProductMapper productMapper, StringRedisTemplate redisTemplate) {
         this.productRepository = productRepository;
-        this.productMapper = productMapper;
         this.eventPublisher = eventPublisher;
+        this.productMapper = productMapper;
+        this.redisTemplate = redisTemplate;
     }
+    
 
     @Override
     @Transactional(readOnly = true)
@@ -36,6 +42,7 @@ public class ProductServiceImpl implements IProductService {
                 .orElseThrow(() -> new ProductNotFoundException("ProductNotFound"));
         return productMapper.toDTO(prod);
     }
+
 
     @Override
     @Transactional
@@ -71,6 +78,9 @@ public class ProductServiceImpl implements IProductService {
     @Override
     @Transactional
     public void sellProduct(Long id, String ipAddress, Integer quantity) {
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + ipAddress))) {
+            throw new SecurityException("Access Denied: Your IP is blocked for suspicious behavior");
+        }
         Product product = productRepository.findByIdForUpdate(id)
             .orElseThrow(() -> new ProductNotFoundException("Product not found"));
         if (product.getProductStock() < quantity) 
