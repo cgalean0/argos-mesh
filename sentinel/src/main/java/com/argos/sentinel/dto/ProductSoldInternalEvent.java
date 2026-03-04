@@ -2,7 +2,7 @@ package com.argos.sentinel.dto;
 
 import java.time.LocalDateTime;
 
-public record ProductSoldEvent(
+public record ProductSoldInternalEvent(
     Long productID,
     Integer quantity,
     String ipAddress,
