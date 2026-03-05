@@ -54,7 +54,7 @@ services:
       redis_db:
         condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     environment:
       - SPRING_RABBITMQ_HOST=message_broker
       - SPRING_RABBITMQ_PORT=5672
@@ -66,9 +66,26 @@ services:
     restart: on-failure
     networks:
         - argos-network
+  
+  notify:
+    build:
+      context: ../notify
+      dockerfile: Dockerfile
+    container_name: notify_app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - SPRING_RABBITMQ_HOST=message_broker
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+    restart: on-failure
+    networks:
+        - argos-network
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3-management-alpine
     container_name: message_broker
     ports:
       - "5672:5672" #AMQP para Spring
@@ -76,6 +93,11 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin123
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - argos-network
 
