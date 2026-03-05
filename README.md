@@ -77,4 +77,4 @@ El sistema fue sometido a pruebas de estrés utilizando **Locust**, simulando at
 
 Para una inmersión profunda en las decisiones de diseño y diagramas técnicos, visita:
 
-👉 [https://cgalean0-argos-mesh.mintlify.app/](https://www.google.com/search?q=https://cgalean0-argos-mesh.mintlify.app/)
+👉 [https://cgalean0-argos-mesh.mintlify.app/](https://cgalean0-argos-mesh.mintlify.app/introduction)
