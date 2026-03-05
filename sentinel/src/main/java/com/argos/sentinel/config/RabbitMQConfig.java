@@ -1,4 +1,4 @@
-package com.argos.sentinel;
+package com.argos.sentinel.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
