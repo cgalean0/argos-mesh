@@ -70,7 +70,7 @@ public class ProductServiceImpl implements IProductService {
         productMapper.updateEntityFromDto(prod, createdProduct);
         Product savedProduct = productRepository.save(createdProduct);
         ProductResponse event = productMapper.toDTO(savedProduct);
-        // We made sure that the message only send to Rabbit if the transaction correctly.
+        // We made sure that the message only send to Rabbit if the transaction finish correctly.
         eventPublisher.publishEvent(new ProductCreatedInternalEvent(event));
         return event;
     }
@@ -86,6 +86,7 @@ public class ProductServiceImpl implements IProductService {
         if (product.getProductStock() < quantity) 
             throw new NotSuficientStockException("The stock is not sufficient");
         product.setProductStock(product.getProductStock() - quantity);
+        productRepository.save(product);
         eventPublisher.publishEvent(new ProductSoldInternalEvent(id, quantity, ipAddress, LocalDateTime.now()));
     }
 
