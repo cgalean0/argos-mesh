@@ -1,9 +1,7 @@
 package com.argos.orders;
-
 import com.argos.orders.model.Product;
 import com.argos.orders.repository.ProductRepository;
 import com.argos.orders.service.IProductService;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +46,7 @@ public class OrderIntegrationTest {
         registry.add("spring.data.redis.host", redis::getHost);
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     }
+
     @Autowired
     private IProductService service;
     @Autowired
@@ -71,19 +70,19 @@ public class OrderIntegrationTest {
         Long id = savedProd.getProductID();
         String ip = "127.0.0.1";
 
-        //ACT
+        // ACT
         service.sellProduct(id, ip, 1);
 
         String redisKey = "blacklist:ip:" + ip;
         Boolean hasKey = redisTemplate.hasKey(redisKey);
-        //ASSERT
+        // ASSERT
         Product updatedProduct = repository.findById(id).get();
         assertEquals((int) updatedProduct.getProductStock(), (savedProd.getProductStock() - 1));
         assertFalse(hasKey);
     }
 
     @Test
-    void testBlockFileWhenIUpdateAnElement() throws InterruptedException{
+    void testBlockFileWhenIUpdateAnElement() throws InterruptedException {
         Product prod = new Product();
         prod.setProductName("Test");
         prod.setProductPrice(BigDecimal.valueOf(100));
@@ -119,5 +118,4 @@ public class OrderIntegrationTest {
         assertEquals(1, successfulPurchases.get());
         assertEquals(99, failedPurchases.get());
     }
-
 }
