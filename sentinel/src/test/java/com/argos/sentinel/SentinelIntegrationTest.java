@@ -101,7 +101,49 @@ public class SentinelIntegrationTest {
     }
 
     @Test
-    void slidingWindowTestWindows() throws InterruptedException {
+    void slidingWindowTestWindowsBlocked() throws InterruptedException {
+        
+        String ip = "127.0.0.1";
+        
+        int numberOfThreads = 49;
+        ExecutorService eService = Executors.newVirtualThreadPerTaskExecutor();
+        CountDownLatch endLatch = new CountDownLatch(numberOfThreads);
+        CyclicBarrier barrier = new CyclicBarrier(49); // 49 threads for lot
+
+        for (int i = 0; i < numberOfThreads; i++) {
+            eService.execute(() -> {
+                try {
+                    barrier.await();
+                    trafficAnalyzer.processAndCheckLimit(ip);
+                } catch (Exception e) {
+                    e.getMessage();
+                } finally {
+                    endLatch.countDown();
+                }
+            });
+        }
+        endLatch.await();
+        Thread.sleep(9000);
+        CountDownLatch endLatch2 = new CountDownLatch(numberOfThreads);
+
+        for (int i = 0; i < numberOfThreads; i++) {
+            eService.execute(() -> {
+                try {
+                    barrier.await();
+                    trafficAnalyzer.processAndCheckLimit(ip);
+                } catch (Exception e) {
+                    e.getMessage();
+                } finally {
+                    endLatch2.countDown();
+                }
+            });
+        }
+        endLatch2.await();
+        assertEquals(true , redisService.isBanned(ip)); // Must be TRUE
+    }
+
+    @Test
+    void slidingWindowTestWindowsNotBlocked() throws InterruptedException {
         
         String ip = "127.0.0.1";
         
@@ -139,6 +181,6 @@ public class SentinelIntegrationTest {
             });
         }
         endLatch2.await();
-        assertEquals(true , redisService.isBanned(ip)); // Must be TRUE
+        assertEquals(false , redisService.isBanned(ip)); // Must be false
     }
 }
